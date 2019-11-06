@@ -133,6 +133,15 @@ ADD cron /etc/service/cron/run
 ADD rsyslog /etc/service/rsyslog/run
 ADD cron.d_anacron /etc/cron.d/anacron
 
+ENV MYSQL_USER=mysql \
+    MYSQL_VERSION=5.7.28 \
+    MYSQL_DATA_DIR=/var/lib/mysql \
+    MYSQL_RUN_DIR=/run/mysqld \
+    MYSQL_LOG_DIR=/var/log/mysql
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server=${MYSQL_VERSION}* \
+ && rm -rf ${MYSQL_DATA_DIR} \
+ && rm -rf /var/lib/apt/lists/*
+
 # Discourse specific bits
 RUN useradd discourse -s /bin/bash -m -U &&\
     mkdir -p /var/www &&\
