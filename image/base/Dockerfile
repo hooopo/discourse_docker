@@ -23,6 +23,26 @@ ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 RUN apt-get install -yqq --no-install-recommends default-libmysqlclient-dev
+
+RUN set -ex; \
+# gpg: key 5072E1F5: public key "MySQL Release Engineering <mysql-build@oss.oracle.com>" imported
+  key='A4A9406876FCBD3C456770C88C718D3B5072E1F5'; \
+  export GNUPGHOME="$(mktemp -d)"; \
+  gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
+  gpg --batch --export "$key" > /etc/apt/trusted.gpg.d/mysql.gpg; \
+  gpgconf --kill all; \
+  rm -rf "$GNUPGHOME"; \
+  apt-key list > /dev/null
+
+ENV MYSQL_MAJOR 5.7
+ENV MYSQL_VERSION 5.7.28-1debian10
+
+RUN echo "deb http://repo.mysql.com/apt/debian/ buster mysql-${MYSQL_MAJOR}" > /etc/apt/sources.list.d/mysql.list
+
+RUN apt-get update && apt-get install --allow-unauthenticated -y mysql-server="${MYSQL_VERSION}" && rm -rf /var/lib/apt/lists/* \
+  && rm -rf /var/lib/mysql && mkdir -p /var/lib/mysql /var/run/mysqld \
+  && chown -R mysql:mysql /var/lib/mysql /var/run/mysqld
+
 RUN curl https://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc | apt-key add -
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main" | \
         tee /etc/apt/sources.list.d/postgres.list
