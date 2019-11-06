@@ -166,7 +166,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server=${MYSQL_VERSI
 RUN useradd discourse -s /bin/bash -m -U &&\
     mkdir -p /var/www &&\
     cd /var/www &&\
-    git clone -b my-2.3.3 https://hooopo:1c307758322f3dfba37869ae4babdce8074cc9cf@github.com/hooopo/mydiscourse.git discourse &&\
+    git clone -b my-2.3.3 https://hooopo:0f090ac77913697fbf5d59fec2f55e6551399905@github.com/hooopo/mydiscourse.git discourse &&\
     cd discourse &&\
     git remote set-branches --add origin tests-passed &&\
     chown -R discourse:discourse /var/www/discourse &&\
