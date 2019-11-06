@@ -89,7 +89,7 @@ run:
         - git reset --hard
         - git clean -f
         - git remote set-branches --add origin master
-        - git pull
+        - git pull origin my-2.3.3
         - git fetch origin $version
         - git checkout $version
         - mkdir -p tmp/pids

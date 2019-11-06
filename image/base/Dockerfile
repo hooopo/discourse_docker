@@ -22,7 +22,7 @@ RUN apt install -y locales locales-all
 ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
-
+RUN apt-get install -yqq --no-install-recommends default-libmysqlclient-dev
 RUN curl https://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc | apt-key add -
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main" | \
         tee /etc/apt/sources.list.d/postgres.list
@@ -137,7 +137,7 @@ ADD cron.d_anacron /etc/cron.d/anacron
 RUN useradd discourse -s /bin/bash -m -U &&\
     mkdir -p /var/www &&\
     cd /var/www &&\
-    git clone https://github.com/discourse/discourse.git &&\
+    git clone -b my-2.3.3 https://hooopo:1c307758322f3dfba37869ae4babdce8074cc9cf@github.com/hooopo/mydiscourse.git discourse &&\
     cd discourse &&\
     git remote set-branches --add origin tests-passed &&\
     chown -R discourse:discourse /var/www/discourse &&\
