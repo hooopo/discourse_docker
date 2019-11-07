@@ -86,7 +86,7 @@ RUN cd / &&\
     apt clean &&\
     rm -f /etc/apt/apt.conf.d/40proxy &&\
     locale-gen en_US &&\
-    apt install -y nodejs &&\
+    npm install -g uglify-js@"<3" &&\
     npm install -g uglify-js &&\
     npm install -g svgo
 
