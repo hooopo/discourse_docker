@@ -32,9 +32,11 @@ character-set-server = utf8mb4
 collation-server = utf8mb4_unicode_ci
 ```
 
-## Config Allow IP
+## Config Bind IP
 
 vim /etc/mysql/mysql.conf.d/mysqld.cnf
+
+firewall setting requred.
 
 ```
 bind-address            = 0.0.0.0
