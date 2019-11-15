@@ -90,8 +90,8 @@ run:
         - git clean -f
         - git remote set-branches --add origin master
         - git pull origin my-2.3.3
-        - git fetch origin $version
-        - git checkout $version
+        - git fetch origin my-2.3.3
+        - git checkout my-2.3.3
         - mkdir -p tmp/pids
         - mkdir -p tmp/sockets
         - touch tmp/.gitkeep
