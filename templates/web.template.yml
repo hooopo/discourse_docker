@@ -89,9 +89,9 @@ run:
         - git reset --hard
         - git clean -f
         - git remote set-branches --add origin master
-        - git pull origin my-2.3.3
-        - git fetch origin my-2.3.3
-        - git checkout my-2.3.3
+        - git pull origin tidb-new
+        - git fetch origin tidb-new
+        - git checkout tidb-new
         - mkdir -p tmp/pids
         - mkdir -p tmp/sockets
         - touch tmp/.gitkeep
