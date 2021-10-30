@@ -5,10 +5,6 @@ ENV RAILS_ENV development
 
 #LABEL maintainer="Sam Saffron \"https://twitter.com/samsaffron\""
 
-# Install for mailcatcher gem
-RUN apt update && apt install -y libsqlite3-dev \
-    && gem install mailcatcher && rm -rf /var/lib/apt/lists/*
-
 # Remove the code added on base image
 RUN rm -rf /var/www/*
 
@@ -41,8 +37,12 @@ ADD ensure-database /etc/runit/1.d/ensure-database
 
 RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add - &&\
     echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list &&\
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - &&\
-    echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list &&\
     apt update &&\
-    apt install -y google-chrome-stable yarn nodejs &&\
+    apt install -y google-chrome-stable firefox-esr &&\
     npm install -g eslint babel-eslint
+
+# Install & Configure MailHog (https://github.com/mailhog/MailHog)
+RUN wget -qO /tmp/mailhog https://github.com/mailhog/MailHog/releases/download/v1.0.1/MailHog_linux_amd64\
+    && echo "e2ed634ded49929f089b20045581955ed217672078fd86082dd7a6c67c5d09c7 /tmp/mailhog" | sha256sum -c -\
+    && mv /tmp/mailhog /usr/local/bin/mailhog\
+    && chmod +x /usr/local/bin/mailhog

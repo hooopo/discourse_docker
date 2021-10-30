@@ -10,7 +10,7 @@
 
 The simplest way to get started is via the **standalone** template, which can be installed in 30 minutes or less. For detailed install instructions, see
 
-https://github.com/discourse/discourse/blob/master/docs/INSTALL-cloud.md
+https://github.com/discourse/discourse/blob/main/docs/INSTALL-cloud.md
 
 ### Directory Structure
 
@@ -44,7 +44,7 @@ The Docker repository will always contain the latest built version at: https://h
 
 The base directory contains a single bash script which is used to manage containers. You can use it to "bootstrap" a new container, enter, start, stop and destroy a container.
 
-```
+```yaml
 Usage: launcher COMMAND CONFIG [--skip-prereqs]
 Commands:
     start:      Start/initialize a container
@@ -53,7 +53,7 @@ Commands:
     destroy:    Stop and remove a container
     enter:      Use docker exec to enter a container
     logs:       Docker logs for container
-	memconfig:  Configure sane defaults for available RAM
+    memconfig:  Configure sane defaults for available RAM
     bootstrap:  Bootstrap a container for the config based on a template
     rebuild:    Rebuild a container (destroy old, bootstrap, start new)
 ```
@@ -66,7 +66,7 @@ The beginning of the container definition can contain the following "special" se
 
 #### templates:
 
-```
+```yaml
 templates:
   - "templates/cron.template.yml"
   - "templates/postgres.template.yml"
@@ -76,7 +76,7 @@ This template is "composed" out of all these child templates, this allows for a 
 
 #### expose:
 
-```
+```yaml
 expose:
   - "2222:22"
   - "127.0.0.1:20080:80"
@@ -87,7 +87,7 @@ Publish port 22 inside the container on port 2222 on ALL local host interfaces. 
 
 #### volumes:
 
-```
+```yaml
 volumes:
   - volume:
       host: /var/discourse/shared
@@ -98,7 +98,8 @@ volumes:
 Expose a directory inside the host to the container.
 
 #### links:
-```
+
+```yaml
 links:
   - link:
       name: postgres
@@ -112,23 +113,24 @@ to the options when running the container.
 
 Setting environment variables to the current container.
 
-```
+```yaml
 # app.yml
 
 env:
   DISCOURSE_DB_HOST: some-host
-  DISCOURSE_DB_NAME: {{config}}_discourse
+  DISCOURSE_DB_NAME: "{{config}}_discourse"
 ```
 
 The above will add `-e DISCOURSE_DB_HOST=some-host -e DISCOURSE_DB_NAME=app_discourse` to the options when running the container.
 
 #### labels:
-```
+
+```yaml
 # app.yml
 
 labels:
-  monitor: 'true'
-  app_name: {{config}}_discourse
+  monitor: "true"
+  app_name: "{{config}}_discourse"
 ```
 
 Add labels to the current container. The above will add `--l monitor=true -l app_name=dev_discourse` to the options
@@ -196,23 +198,6 @@ installs you can ensure they are in sync by looking at `/etc/passwd` and
 - [Multisite configuration with Docker](https://meta.discourse.org/t/multisite-configuration-with-docker/14084)
 - [Linking containers for a multiple container setup](https://meta.discourse.org/t/linking-containers-for-a-multiple-container-setup/20867)
 - [Using Rubygems mirror to improve connection problem in China](https://meta.discourse.org/t/replace-rubygems-org-with-taobao-mirror-to-resolve-network-error-in-china/21988/1)
-
-### Developing with Vagrant
-
-If you are looking to make modifications to this repository, you can easily test
-out your changes before committing, using the magic of
-[Vagrant](http://vagrantup.com).  Install Vagrant as per [the default
-instructions](http://docs.vagrantup.com/v2/installation/index.html), and
-then run:
-
-    vagrant up
-
-This will spawn a new Ubuntu VM, install Docker, and then await your
-instructions.  You can then SSH into the VM with `vagrant ssh`, become
-`root` with `sudo -i`, and then you're right to go.  Your live git repo is
-already available at `/vagrant`, so you can just `cd /vagrant`
-and then start running `launcher`.
-
 
 License
 ===

@@ -1,4 +1,4 @@
-# This template installs MariaDB and all dependencies needed for importing from phpBB3.
+# This template installs MariaDB and all dependencies needed for importing from vanilla.
 
 params:
   home: /var/www/discourse
@@ -66,20 +66,19 @@ hooks:
           sv stop mysql
 
     - file:
-        path: /usr/local/bin/import_phpbb3.sh
+        path: /usr/local/bin/import_vanilla.sh
         chmod: "+x"
         contents: |
           #!/bin/bash
           set -e
 
-          chown discourse /shared/import/settings.yml
           chown discourse -R /shared/import/data
 
           # Allow connection as root user without password
           mysql -uroot -e "UPDATE mysql.user SET plugin = 'mysql_native_password' WHERE user = 'root' AND plugin = 'unix_socket'"
           mysql -uroot -e "FLUSH PRIVILEGES"
 
-          if [ -f "/shared/import/data/phpbb_mysql.sql" ]; then
+          if [ -f "/shared/import/data/vanilla_mysql.sql" ]; then
             if [ -f "/shared/import/mysql/imported" ] && ! sha256sum --check /shared/import/mysql/imported &>/dev/null ; then
               echo "Checksum of database dump changed..."
               rm /shared/import/mysql/imported
@@ -87,26 +86,25 @@ hooks:
 
             if [ ! -f "/shared/import/mysql/imported" ]; then
               echo "Loading database dump into MySQL..."
-              mysql -uroot -e "DROP DATABASE IF EXISTS phpbb"
-              mysql -uroot -e "CREATE DATABASE phpbb"
-              mysql -uroot --default-character-set=utf8 --database=phpbb < /shared/import/data/phpbb_mysql.sql
-              sha256sum /shared/import/data/phpbb_mysql.sql > /shared/import/mysql/imported
+              mysql -uroot -e "DROP DATABASE IF EXISTS vanilla"
+              mysql -uroot -e "CREATE DATABASE vanilla"
+              mysql -uroot --default-character-set=utf8 --database=vanilla < /shared/import/data/vanilla_mysql.sql
+              sha256sum /shared/import/data/vanilla_mysql.sql > /shared/import/mysql/imported
             fi
           else
             sv stop mysql
           fi
 
           cd $home
-          echo "The phpBB3 import is starting..."
+          echo "The Vanilla import is starting..."
           echo
-          su discourse -c 'bundle exec ruby script/import_scripts/phpbb3.rb /shared/import/settings.yml'
+          su discourse -c 'bundle exec ruby script/import_scripts/vanilla.rb'
 
     - exec:
         cd: $home
         cmd:
           - mkdir -p /shared/import/data
           - chown discourse -R /shared/import
-          - cp -n script/import_scripts/phpbb3/settings.yml /shared/import/settings.yml
 
   after_bundle_exec:
     - exec:

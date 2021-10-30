@@ -23,6 +23,9 @@ usage () {
   exit 1
 }
 
+# for potential re-exec later
+SAVED_ARGV=("$@")
+
 command=$1
 config=$2
 
@@ -65,7 +68,6 @@ done
 
 if [ -z "$command" -o -z "$config" -a "$command" != "cleanup" ]; then
   usage
-  exit 1
 fi
 
 # Docker doesn't like uppercase characters, spaces or special characters, catch it now before we build everything out and then find out
@@ -80,6 +82,7 @@ fi
 
 cd "$(dirname "$0")"
 
+pups_version='v1.0.3'
 docker_min_version='17.03.1'
 docker_rec_version='17.06.2'
 git_min_version='1.8.0'
@@ -88,7 +91,9 @@ git_rec_version='1.8.0'
 config_file=containers/"$config".yml
 cidbootstrap=cids/"$config"_bootstrap.cid
 local_discourse=local_discourse
+
 image="hooopo/discourse-base"
+
 docker_path=`which docker.io 2> /dev/null || which docker`
 git_path=`which git`
 
@@ -144,6 +149,11 @@ install_docker() {
   exit 1
 }
 
+pull_image() {
+  # Add a single retry to work around dockerhub TLS errors
+  $docker_path pull $image || $docker_path pull $image
+}
+
 check_prereqs() {
 
   if [ -z $docker_path ]; then
@@ -162,7 +172,7 @@ check_prereqs() {
   # 2. running an approved storage driver?
   if ! $docker_path info 2> /dev/null | egrep -q 'Storage Driver: (aufs|zfs|overlay2)$'; then
     echo "Your Docker installation is not using a supported storage driver.  If we were to proceed you may have a broken install."
-    echo "aufs is the recommended storage driver, although zfs and overlay2 may work as well."
+    echo "overlay2 is the recommended storage driver, although zfs and aufs may work as well."
     echo "Other storage drivers are known to be problematic."
     echo "You can tell what filesystem you are using by running \"docker info\" and looking at the 'Storage Driver' line."
     echo
@@ -196,6 +206,8 @@ check_prereqs() {
     echo
     echo "Please be patient"
     echo
+
+    pull_image
   fi
 
   # 5. running recommended git version
@@ -225,18 +237,17 @@ check_prereqs() {
   # 7. enough space for the bootstrap on docker folder
   folder=`$docker_path info --format '{{.DockerRootDir}}'`
   safe_folder=${folder:-/var/lib/docker}
-  test=$(($(stat -f --format="%a*%S" $safe_folder)/1024**3 < 5))
-  if [[ $test -ne 0 ]] ; then
+  if [[ -d $safe_folder && $(stat -f --format="%a*%S" $safe_folder)/1024**3 -lt 5 ]] ; then
     echo "You have less than 5GB of free space on the disk where $safe_folder is located. You will need more space to continue"
     df -h $safe_folder
     echo
     if tty >/dev/null; then
-      read -p "Would you like to attempt to recover space by cleaning docker images and containers in the system?(y/N)" -n 1 -r
+      read -p "Would you like to attempt to recover space by cleaning docker images and containers in the system? (y/N)" -n 1 -r
       echo
       if [[ $REPLY =~ ^[Yy]$ ]]
       then
-        $docker_path container prune --force --filter until=1h >/dev/null
-        $docker_path image prune --all --force --filter until=1h >/dev/null
+        $docker_path container prune --force --filter until=24h >/dev/null
+        $docker_path image prune --all --force --filter until=24h >/dev/null
         echo "If the cleanup was successful, you may try again now"
       fi
     fi
@@ -248,37 +259,6 @@ check_prereqs() {
 if [ -z "$SKIP_PREREQS" ] && [ "$command" != "cleanup" ]; then
   check_prereqs
 fi
-
-host_run() {
-  read -r -d '' env_ruby << 'RUBY'
-  require 'yaml'
-
-  input = STDIN.readlines.join
-  yaml = YAML.load(input)
-
-  if host_run = yaml['host_run']
-    params = yaml['params'] || {}
-    host_run.each do |run|
-      params.each do |k,v|
-        run = run.gsub("$#{k}", v)
-      end
-      STDOUT.write "#{run}--SEP--"
-    end
-  end
-RUBY
-
-  host_run=`cat $config_file | $docker_path run $user_args --rm -i -a stdout -a stdin $image ruby -e "$env_ruby"`
-
-  while [ "$host_run" ] ; do
-    iter=${host_run%%--SEP--*}
-    echo
-    echo "Host run: $iter"
-    $iter || exit 1
-    echo
-    host_run="${host_run#*--SEP--}"
-  done
-}
-
 
 set_volumes() {
   volumes=`cat $config_file | $docker_path run $user_args --rm -i -a stdout -a stdin $image ruby -e \
@@ -297,15 +277,6 @@ find_templates() {
     local arrTemplates=${templates// / }
 
     if [ ! -z "$templates" ]; then
-      for template in "${arrTemplates[@]}"
-      do
-        local nested_templates=$(find_templates $template)
-
-        if [ ! -z "$nested_templates" ]; then
-          templates="$templates $nested_templates"
-        fi
-      done
-
       echo $templates
     else
       echo ""
@@ -348,6 +319,7 @@ set_template_info() {
         p e
        end
     end
+    env.each{|k,v| puts "*ERROR." if v.is_a?(Hash)}
     puts env.map{|k,v| "-e\n#{k}=#{v}" }.join("\n")
 RUBY
 
@@ -476,11 +448,11 @@ fi
   if [ -d /var/discourse/shared/standalone/postgres_data_old ]; then
     echo
     echo "Old PostgreSQL backup data cluster detected taking up $(du -hs /var/discourse/shared/standalone/postgres_data_old | awk '{print $1}') detected"
-    read -p "Would you like to remove it? (Y/n): " -n 1 -r && echo
+    read -p "Would you like to remove it? (y/N): " -n 1 -r && echo
 
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       echo "removing old PostgreSQL data cluster at /var/discourse/shared/standalone/postgres_data_old..."
-      rm -rf /var/discourse/shared/standalone/postgres_data_old
+      rm -rf /var/discourse/shared/standalone/postgres_data_old*
     else
       exit 1
     fi
@@ -514,7 +486,7 @@ run_stop() {
      then
        (
         set -x
-        $docker_path stop -t 10 $config
+        $docker_path stop -t 30 $config
        )
      else
        echo "$config was not started !"
@@ -584,8 +556,6 @@ run_start() {
      fi
    fi
 
-   host_run
-
    set_template_info
    set_volumes
    set_links
@@ -653,11 +623,9 @@ run_run() {
 }
 
 run_bootstrap() {
-  host_run
-
   # Is the image available?
   # If not, pull it here so the user is aware what's happening.
-  $docker_path history $image >/dev/null 2>&1 || $docker_path pull $image
+  $docker_path history $image >/dev/null 2>&1 || pull_image
 
   set_template_info
 
@@ -678,7 +646,7 @@ run_bootstrap() {
 
   run_command="cd /pups &&"
   if [[ ! "false" =  $update_pups ]]; then
-    run_command="$run_command git pull &&"
+    run_command="$run_command git pull && git checkout $pups_version &&"
   fi
   run_command="$run_command /pups/bin/pups --stdin"
 
@@ -769,6 +737,13 @@ case "$command" in
 
   rebuild)
       if [ "$(git symbolic-ref --short HEAD)" == "master" ]; then
+        git branch -m master main
+        git fetch origin
+        git branch -u origin/main main
+        git remote set-head origin -a
+      fi
+
+      if [ "$(git symbolic-ref --short HEAD)" == "main" ]; then
         echo "Ensuring launcher is up to date"
 
         git remote update
@@ -781,14 +756,11 @@ case "$command" in
           echo "Launcher is up-to-date"
 
         elif [ $LOCAL = $BASE ]; then
-          echo "Updating Launcher"
+          echo "Updating Launcher..."
           git pull || (echo 'failed to update' && exit 1)
 
-          for (( i=${#BASH_ARGV[@]}-1,j=0; i>=0,j<${#BASH_ARGV[@]}; i--,j++ ))
-          do
-            args[$j]=${BASH_ARGV[$i]}
-          done
-          exec /bin/bash $0 "${args[@]}" # $@ is empty, because of shift at the beginning. Use BASH_ARGV instead.
+          echo "Launcher updated, restarting..."
+          exec "$0" "${SAVED_ARGV[@]}"
 
         elif [ $REMOTE = $BASE ]; then
           echo "Your version of Launcher is ahead of origin"
@@ -806,7 +778,7 @@ case "$command" in
           echo "Stopping old container"
           (
             set -x
-            $docker_path stop -t 10 $config
+            $docker_path stop -t 60 $config
           )
       fi
 

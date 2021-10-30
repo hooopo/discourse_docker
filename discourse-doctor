@@ -185,7 +185,7 @@ get_discourse_config() {
 
 check_plugins() {
   log -e "\n\n==================== PLUGINS ===================="
-  log -e "$(grep git containers/$app_name.yml)"
+  log -e "$(grep 'git clone' containers/$app_name.yml)"
   grep git containers/$app_name.yml > /tmp/$PPID.grep
 
   if grep -cv "github.com/discourse" /tmp/$PPID.grep > /dev/null
@@ -196,7 +196,7 @@ check_plugins() {
   else
     log -e "\nNo non-official plugins detected."
   fi
-  log -e "\nSee https://github.com/discourse/discourse/blob/master/lib/plugin/metadata.rb for the official list.\n"
+  log -e "\nSee https://github.com/discourse/discourse/blob/main/lib/plugin/metadata.rb for the official list.\n"
 }
 
 dump_yaml() {
@@ -210,7 +210,7 @@ dump_yaml() {
 ##
 read_config() {
   config_line=$(egrep "^  #?$1:" $web_file)
-  read_config_result=$(echo $config_line | awk  --field-separator=":" '{print $2}')
+  read_config_result=$(echo $config_line | awk  -F ":" '{print $2}')
   read_config_result=$(echo $read_config_result | sed "s/^\([\"']\)\(.*\)\1\$/\2/g")
 }
 
@@ -316,10 +316,16 @@ print_done() {
 
   if [ $app_name == 'app' ] && [ "$NO_CONTAINER" != 'y' ]
   then
-    cp $LOG_FILE shared/standalone/log/var-log/$DOCTOR_FILE
-    sudo docker exec -w /var/www/discourse -i $app_name cp /var/log/$DOCTOR_FILE  public
-    log "The output of this program may be available at http://$DISCOURSE_HOSTNAME/$DOCTOR_FILE"
-    log "You should inspect that file carefully before sharing the URL."
+    read -p "Would you like to serve a publicly available version of this file? (Y/n)" serve
+    if [ $serve == 'Y' ]
+    then
+        cp $LOG_FILE shared/standalone/log/var-log/$DOCTOR_FILE
+        sudo docker exec -w /var/www/discourse -i $app_name cp /var/log/$DOCTOR_FILE  public
+        log "The output of this program may be available at http://$DISCOURSE_HOSTNAME/$DOCTOR_FILE"
+        log "You should inspect that file carefully before sharing the URL."
+    else
+        log "Publicly available log not generated."
+    fi
   fi
   # The following is not in the web log file since it was copied above, which seems corect
   log

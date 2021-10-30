@@ -5,8 +5,6 @@ params:
   db_default_text_search_config: "pg_catalog.english"
   db_name: discourse
   db_user: discourse
-  db_wal_level: minimal
-  db_max_wal_senders: 0
   db_checkpoint_segments: 6
   db_logging_collector: off
   db_log_min_duration_statement: 100
@@ -96,16 +94,6 @@ run:
 
   - replace:
       filename: "/etc/postgresql/9.5/main/postgresql.conf"
-      from: /#?max_wal_senders *=.*/
-      to: "max_wal_senders = $db_max_wal_senders"
-
-  - replace:
-      filename: "/etc/postgresql/9.5/main/postgresql.conf"
-      from: /#?wal_level *=.*/
-      to: "wal_level = $db_wal_level"
-
-  - replace:
-      filename: "/etc/postgresql/9.5/main/postgresql.conf"
       from: /#?checkpoint_segments *=.*/
       to: "checkpoint_segments = $db_checkpoint_segments"
 
@@ -129,6 +117,12 @@ run:
       filename: "/etc/postgresql/9.5/main/pg_hba.conf"
       from: /^host.*all.*all.*127.*$/
       to: "host all all 0.0.0.0/0 md5"
+
+  # allow all to connect in with md5 auth (IPv6)
+  - replace:
+      filename: "/etc/postgresql/9.5/main/pg_hba.conf"
+      from: /^host.*all.*all.*::1\/128.*$/
+      to: "host all all ::/0 md5"
 
   - exec:
       background: true

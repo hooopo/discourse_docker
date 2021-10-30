@@ -7,20 +7,22 @@
 ## YAML FILES ARE SUPER SUPER SENSITIVE TO MISTAKES IN WHITESPACE OR ALIGNMENT!
 ## visit http://www.yamllint.com/ to validate this file as needed
 
-base_image: discourse/mail-receiver:1.1.2
+base_image: discourse/mail-receiver:release
 update_pups: false
 
 expose:
   - "25:25"   # SMTP
 
 env:
+  LC_ALL: en_US.UTF-8
   LANG: en_US.UTF-8
+  LANGUAGE: en_US.UTF-8
 
   ## Where e-mail to your forum should be sent.  In general, it's perfectly fine
   ## to use the same domain as the forum itself here.
   MAIL_DOMAIN: discourse.example.com
 # uncomment these (and the volume below!) to support TLS 
-#  POSTCONF_smtpd_tls_key_file:  /letsencrypt/discourse.example.com/prop.ltcmp.net.key
+#  POSTCONF_smtpd_tls_key_file:  /letsencrypt/discourse.example.com/discourse.example.com.key
 #  POSTCONF_smtpd_tls_cert_file:  /letsencrypt/discourse.example.com/fullchain.cer
 #  POSTCONF_smtpd_tls_security_level: may
 
@@ -29,7 +31,7 @@ env:
   ## This is simply your forum's base URL, with `/admin/email/handle_mail`
   ## appended.  Be careful if you're running a subfolder setup -- in that case,
   ## the URL needs to have the subfolder included!
-  DISCOURSE_MAIL_ENDPOINT: 'http://discourse.example.com/admin/email/handle_mail'
+  DISCOURSE_MAIL_ENDPOINT: 'https://discourse.example.com/admin/email/handle_mail'
 
   ## The master API key of your Discourse forum.  You can get this from
   ## the "API" tab of your admin panel.
